@@ -36,3 +36,6 @@ configs/*
 # OS / notebook noise
 .DS_Store
 .ipynb_checkpoints/
+
+# data
+/data

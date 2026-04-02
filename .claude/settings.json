@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /home/joonseo2012/kddcup2026-data-agents-starter-kit/src/data_agent_baseline/**/*.py)"
+    ]
+  }
+}

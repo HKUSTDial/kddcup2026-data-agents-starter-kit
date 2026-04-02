@@ -2,9 +2,9 @@ dataset:
   root_path: data/public/input
 
 agent:
-  model: YOUR_MODEL_NAME
-  api_base: YOUR_API_BASE_URL
-  api_key: YOUR_API_KEY
+  model: gpt-4-turbo
+  api_base: https://openai.com
+  api_key: gpt-5.4-mini
   max_steps: 16
   temperature: 0.0
 
