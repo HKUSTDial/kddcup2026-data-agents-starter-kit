@@ -20,6 +20,7 @@ htmlcov/
 .env
 .env.local
 .env.*.local
+.codex
 
 # Local data, docs, tests, and artifacts
 data/

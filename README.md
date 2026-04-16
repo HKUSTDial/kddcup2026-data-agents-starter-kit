@@ -5,8 +5,8 @@
 English | [中文](README.zh.md)
 
 [![Official Website](https://img.shields.io/badge/Official%20Website-Visit%20dataagent.top-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=0f172a)](https://dataagent.top)
-[![Demo Dataset](https://img.shields.io/badge/Demo%20Dataset-Download%20Phase%201-f59e0b?style=for-the-badge&logo=googledrive&logoColor=white&labelColor=0f172a)](https://drive.google.com/file/d/1n8vrRIjhVz0STj1DYZ7fSNL2JHtswu4J/view?usp=share_link)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=0f172a)](https://discord.gg/vRr7uyK9)
+[![Demo Dataset](https://img.shields.io/badge/Demo%20Dataset-Download%20Phase%201-f59e0b?style=for-the-badge&logo=googledrive&logoColor=white&labelColor=0f172a)](https://drive.google.com/file/d/1lICQVM_LfyQ5DMEIZjssq6aaOPTWCtNd/view?usp=share_link)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=0f172a)](https://discord.com/invite/7eFwJQN3Fx)
 
 </div>
 
@@ -170,7 +170,7 @@ artifacts/runs/<run_id>/summary.json
 
 - Open issues: https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues
 - Official website: https://dataagent.top
-- Discord: https://discord.gg/vRr7uyK9
+- Discord: https://discord.com/invite/7eFwJQN3Fx
 - WeChat official account: `数据智能与分析实验室 DIAL`
 
 <div align="center">
@@ -188,9 +188,9 @@ artifacts/runs/<run_id>/summary.json
         Official Website
       </td>
       <td align="center">
-        <a href="https://discord.gg/vRr7uyK9">
+        <a href="https://discord.com/invite/7eFwJQN3Fx">
           <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https://discord.gg/vRr7uyK9&bgcolor=ffffff&color=111827&margin=8"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https://discord.com/invite/7eFwJQN3Fx&bgcolor=ffffff&color=111827&margin=8"
             alt="Discord QR code"
             width="144"
           />
@@ -200,7 +200,7 @@ artifacts/runs/<run_id>/summary.json
       </td>
       <td align="center">
         <img
-          src="assets/HKUSTGZ_DIAL.jpg"
+          src="https://dataagent.top/HKUSTGZ_DIAL.jpg"
           alt="WeChat official account QR code"
           width="144"
         />
