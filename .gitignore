@@ -37,3 +37,17 @@ configs/*
 # OS / notebook noise
 .DS_Store
 .ipynb_checkpoints/
+
+# Windows
+Thumbs.db
+Thumbs.db:encdata
+desktop.ini
+*.lnk
+$RECYCLE.BIN/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

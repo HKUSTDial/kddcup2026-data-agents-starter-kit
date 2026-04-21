@@ -55,7 +55,7 @@ def _path_value(raw_value: str | None, default_value: Path) -> Path:
 
 
 def load_app_config(config_path: Path) -> AppConfig:
-    payload = yaml.safe_load(config_path.read_text()) or {}
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     dataset_defaults = DatasetConfig()
     agent_defaults = AgentConfig()
     run_defaults = RunConfig()

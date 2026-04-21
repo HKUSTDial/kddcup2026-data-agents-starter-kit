@@ -105,8 +105,8 @@ def execute_python_code(context_root: Path, code: str, *, timeout_seconds: int =
     with tempfile.TemporaryDirectory() as temp_dir:
         stdout_path = Path(temp_dir) / "stdout.txt"
         stderr_path = Path(temp_dir) / "stderr.txt"
-        stdout_path.write_text("")
-        stderr_path.write_text("")
+        stdout_path.write_text("", encoding="utf-8")
+        stderr_path.write_text("", encoding="utf-8")
 
         queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
         process = multiprocessing.Process(

@@ -1,0 +1,37 @@
+# Normalize line endings for cross-platform collaboration (Windows CRLF <-> Linux LF)
+* text=auto
+
+# Source and config files — always LF in the repo
+*.py        text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.toml      text eol=lf
+*.lock      text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.json      text eol=lf
+*.sh        text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+*.csv       text eol=lf
+
+# Binary assets — never touch line endings
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.pdf       binary
+*.pkl       binary
+*.pyc       binary
+*.db        binary
+*.sqlite    binary
+*.parquet   binary
+*.arrow     binary
+*.feather   binary

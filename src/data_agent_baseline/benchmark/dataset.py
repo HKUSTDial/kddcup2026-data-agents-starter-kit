@@ -16,7 +16,7 @@ def _task_number(task_id: str) -> int:
 
 
 def _load_task_record(task_json_path: Path) -> TaskRecord:
-    payload = json.loads(task_json_path.read_text())
+    payload = json.loads(task_json_path.read_text(encoding="utf-8"))
     expected_keys = {"task_id", "difficulty", "question"}
     actual_keys = set(payload)
     if actual_keys != expected_keys:

@@ -1,3 +1,4 @@
+import multiprocessing
 from pathlib import Path
 from time import perf_counter
 
@@ -258,4 +259,5 @@ def run_benchmark_command(
 
 
 def main() -> None:
+    multiprocessing.freeze_support()  # no-op on Linux/Mac; required for frozen Windows executables
     app()
