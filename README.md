@@ -74,7 +74,7 @@ uv.lock                           # Locked dependency versions
 
 ## Engineering Notes
 
-- [2026-07-23: Phase 1 Local Evaluation Pipeline](docs/2026-07-23-phase1-evaluation-pipeline.md)
+- [2026-07-23: Phase 1 Local Evaluation Pipeline](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
 
 ## Contact
 

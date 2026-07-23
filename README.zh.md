@@ -74,7 +74,7 @@ uv.lock                           # 锁定的依赖版本
 
 ## 工程记录
 
-- [2026-07-23：Phase 1 本地评测链路改造](docs/2026-07-23-phase1-evaluation-pipeline.md)
+- [2026-07-23：Phase 1 本地评测链路改造](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
 
 ## 联系方式
 
