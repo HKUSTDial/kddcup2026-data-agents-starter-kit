@@ -16,7 +16,17 @@ from rich.table import Table
 
 from data_agent_baseline.benchmark.dataset import DABenchPublicDataset
 from data_agent_baseline.config import load_app_config
-from data_agent_baseline.run.runner import TaskRunArtifacts, create_run_output_dir, run_benchmark, run_single_task
+from data_agent_baseline.evaluation import (
+    EvaluationError,
+    evaluate_predictions,
+    write_evaluation_report,
+)
+from data_agent_baseline.run.runner import (
+    TaskRunArtifacts,
+    create_run_output_dir,
+    run_benchmark,
+    run_single_task,
+)
 from data_agent_baseline.tools.filesystem import list_context_tree
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -93,7 +103,11 @@ def status(
     table.add_row("configs_dir", str(CONFIGS_DIR), _status_value(CONFIGS_DIR))
     table.add_row("artifacts_dir", str(ARTIFACTS_DIR), _status_value(ARTIFACTS_DIR))
     table.add_row("runs_dir", str(ARTIFACT_RUNS_DIR), _status_value(ARTIFACT_RUNS_DIR))
-    table.add_row("dataset_root", str(app_config.dataset.root_path), _status_value(app_config.dataset.root_path))
+    table.add_row(
+        "dataset_root",
+        str(app_config.dataset.root_path),
+        _status_value(app_config.dataset.root_path),
+    )
     table.add_row("config_path", str(config_path), _status_value(config_path))
 
     console.print(table)
@@ -130,6 +144,91 @@ def inspect_task(
     console.print(table)
 
 
+@app.command("score-run")
+def score_run_command(
+    predictions_dir: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=False,
+        resolve_path=True,
+        help="Run directory containing task_<id>/prediction.csv files.",
+    ),
+    gold_dir: Path = typer.Option(
+        PROJECT_ROOT / "data" / "public" / "output",
+        exists=True,
+        file_okay=False,
+        resolve_path=True,
+        help="Directory containing task_<id>/gold.csv files.",
+    ),
+    input_dir: Path | None = typer.Option(
+        PROJECT_ROOT / "data" / "public" / "input",
+        exists=True,
+        file_okay=False,
+        resolve_path=True,
+        help="Optional task input directory used for difficulty metadata.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        dir_okay=False,
+        resolve_path=True,
+        help="Score report path. Defaults to <predictions_dir>/scores.json.",
+    ),
+    penalty_weight: float = typer.Option(
+        0.1,
+        min=0.0,
+        help="Penalty weight applied to unmatched extra columns.",
+    ),
+    strict_commas: bool = typer.Option(
+        False,
+        help="Keep numeric grouping commas instead of removing them.",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        help="Print one score row per task.",
+    ),
+) -> None:
+    """Score a prediction run against public gold answers."""
+
+    output_path = output or (predictions_dir / "scores.json")
+    try:
+        report = evaluate_predictions(
+            predictions_dir,
+            gold_dir,
+            input_root=input_dir,
+            penalty_weight=penalty_weight,
+            strict_commas=strict_commas,
+        )
+        write_evaluation_report(report, output_path)
+    except (EvaluationError, OSError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    aggregate = report.aggregate
+    console.print(f"Score report: {output_path}")
+    console.print(
+        "Total score: "
+        f"{aggregate['total_score']:.4f} "
+        f"({aggregate['tasks_scored_nonzero']}/{aggregate['task_count']} tasks non-zero; "
+        f"{aggregate['tasks_missing']} missing)"
+    )
+
+    if verbose:
+        table = Table(title="Task Scores")
+        table.add_column("Task")
+        table.add_column("Status")
+        table.add_column("Recall", justify="right")
+        table.add_column("Penalty", justify="right")
+        table.add_column("Score", justify="right")
+        for task_id, task_score in report.per_task.items():
+            table.add_row(
+                task_id,
+                task_score.status,
+                f"{task_score.recall:.3f}",
+                f"{task_score.penalty:.3f}",
+                f"{task_score.score:.3f}",
+            )
+        console.print(table)
+
+
 @app.command("run-task")
 def run_task_command(
     task_id: str,
@@ -138,7 +237,9 @@ def run_task_command(
     """Run the ReAct baseline on one task."""
     app_config = load_app_config(config)
     try:
-        _, run_output_dir = create_run_output_dir(app_config.run.output_dir, run_id=app_config.run.run_id)
+        _, run_output_dir = create_run_output_dir(
+            app_config.run.output_dir, run_id=app_config.run.run_id
+        )
     except (ValueError, FileExistsError) as exc:
         raise typer.BadParameter(str(exc), param_hint="run.run_id") from exc
     artifacts = run_single_task(task_id=task_id, config=app_config, run_output_dir=run_output_dir)

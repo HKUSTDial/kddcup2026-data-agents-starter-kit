@@ -166,6 +166,21 @@ Benchmark runs also write:
 artifacts/runs/<run_id>/summary.json
 ```
 
+## Local Evaluation
+
+Score a run against the public demo answers:
+
+```bash
+uv run dabench score-run artifacts/runs/<run_id> \
+  --gold-dir data/public/output \
+  --input-dir data/public/input \
+  --verbose
+```
+
+The command writes `scores.json` into the run directory. See
+[`docs/evaluation.md`](docs/evaluation.md) for the scoring formula,
+normalization rules, and interpretation of partial runs.
+
 ## Contact
 
 - Open issues: https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues

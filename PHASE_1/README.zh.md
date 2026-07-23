@@ -166,6 +166,20 @@ artifacts/runs/<run_id>/<task_id>/
 artifacts/runs/<run_id>/summary.json
 ```
 
+## 本地评测
+
+使用公开 demo 的标准答案评测一次运行：
+
+```bash
+uv run dabench score-run artifacts/runs/<run_id> \
+  --gold-dir data/public/output \
+  --input-dir data/public/input \
+  --verbose
+```
+
+命令默认在运行目录中写入 `scores.json`。评分公式、归一化规则和部分任务运行的解释见
+[`docs/evaluation.md`](docs/evaluation.md)。
+
 ## Contact
 
 - 问题反馈： https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues
