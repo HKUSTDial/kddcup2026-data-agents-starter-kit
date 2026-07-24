@@ -90,12 +90,15 @@ agent:
   api_key: YOUR_API_KEY
   max_steps: 16
   temperature: 0.0
+  model_request_timeout_seconds: 20
+  model_max_retries: 1
+  model_retry_backoff_seconds: 1
 
 run:
   output_dir: artifacts/runs
   run_id:
-  max_workers: 4
-  task_timeout_seconds: 600
+  max_workers: 2
+  task_timeout_seconds: 120
 ```
 
 Config fields:
@@ -108,8 +111,11 @@ Config fields:
 | `agent.api_key` | API key, read directly from the config file. |
 | `agent.max_steps` | Maximum ReAct steps per task. |
 | `agent.temperature` | Sampling temperature. |
+| `agent.model_request_timeout_seconds` | Wall-clock timeout for one model request attempt. |
+| `agent.model_max_retries` | Application-level retries for transient model API failures. |
+| `agent.model_retry_backoff_seconds` | Base retry delay; exponential backoff and jitter are capped at five seconds. |
 | `run.output_dir` | Output directory for run artifacts. |
-| `run.run_id` | Optional run directory name. Defaults to a UTC timestamp if omitted. Must be a single directory name; existing run directories are rejected. |
+| `run.run_id` | Optional run directory name. Defaults to a UTC timestamp if omitted. Required by `--resume`. |
 | `run.max_workers` | Parallel worker count for `run-benchmark`. |
 | `run.task_timeout_seconds` | Maximum wall-clock time per task. Set to `0` or a negative value to disable the task-level timeout. |
 
@@ -126,7 +132,35 @@ uv run dabench <command> --config PATH [options]
 | `run-task` | Run the baseline on one task and write outputs. | `uv run dabench run-task task_1 --config configs/react_baseline.local.yaml` |
 | `run-benchmark` | Run the baseline across the public dataset. | `uv run dabench run-benchmark --config configs/react_baseline.local.yaml` |
 
-`run-benchmark` also supports `--limit N` to cap the number of tasks.
+`run-benchmark` supports:
+
+- `--limit N` to cap the number of tasks;
+- `--task-file PATH` to run one task ID per non-comment line;
+- `--resume` to reuse the directory named by `run.run_id`;
+- `--retry-failed` with `--resume` to archive and rerun completed failures.
+
+Run the fixed 11-task regression selection:
+
+```bash
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt
+```
+
+Set `run.run_id` to the existing run directory name, then resume an interrupted run or
+retry only its completed failures:
+
+```bash
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt \
+  --resume
+
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt \
+  --resume --retry-failed
+```
 
 ## Tools
 
@@ -149,6 +183,7 @@ All file paths passed to tools must be relative to the task `context/` directory
 
 Each successful task run may produce:
 
+- `events.jsonl`
 - `trace.json`
 - `prediction.csv`
 
@@ -156,6 +191,7 @@ Per-task outputs are written to:
 
 ```text
 artifacts/runs/<run_id>/<task_id>/
+├── events.jsonl
 ├── trace.json
 └── prediction.csv
 ```
@@ -163,8 +199,13 @@ artifacts/runs/<run_id>/<task_id>/
 Benchmark runs also write:
 
 ```text
+artifacts/runs/<run_id>/manifest.json
 artifacts/runs/<run_id>/summary.json
 ```
+
+`events.jsonl` is flushed after every model request, tool call, and completed step, so a
+hard timeout still leaves diagnostic progress. Retried task artifacts are archived under
+`<task_id>/attempts/attempt_NNN/`.
 
 ## Local Evaluation
 
@@ -180,6 +221,10 @@ uv run dabench score-run artifacts/runs/<run_id> \
 The command writes `scores.json` into the run directory. See
 [`docs/evaluation.md`](docs/evaluation.md) for the scoring formula,
 normalization rules, and interpretation of partial runs.
+
+The motivation, implementation changes, and sanitized runtime comparison for the
+reliability work are recorded in
+[`docs/2026-07-24-runner-reliability.md`](docs/2026-07-24-runner-reliability.md).
 
 ## Contact
 

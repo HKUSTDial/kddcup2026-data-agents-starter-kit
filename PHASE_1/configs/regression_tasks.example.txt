@@ -1,0 +1,18 @@
+# Easy: perfect, no-match, partial, and long-trace baseline cases
+task_11
+task_22
+task_27
+task_38
+
+# Medium: protocol-loop and fast-success cases
+task_145
+task_259
+task_292
+
+# Hard: the three tasks that previously reached the 600-second timeout
+task_344
+task_379
+task_420
+
+# Extreme
+task_418

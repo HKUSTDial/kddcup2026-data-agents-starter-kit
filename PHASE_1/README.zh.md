@@ -90,12 +90,15 @@ agent:
   api_key: YOUR_API_KEY
   max_steps: 16
   temperature: 0.0
+  model_request_timeout_seconds: 20
+  model_max_retries: 1
+  model_retry_backoff_seconds: 1
 
 run:
   output_dir: artifacts/runs
   run_id:
-  max_workers: 4
-  task_timeout_seconds: 600
+  max_workers: 2
+  task_timeout_seconds: 120
 ```
 
 配置字段说明：
@@ -108,8 +111,11 @@ run:
 | `agent.api_key` | API key，直接从配置文件读取。 |
 | `agent.max_steps` | 单个任务允许的最大 ReAct 步数。 |
 | `agent.temperature` | 模型采样温度。 |
+| `agent.model_request_timeout_seconds` | 单次模型请求尝试的墙钟超时。 |
+| `agent.model_max_retries` | 瞬时模型 API 故障的应用层重试次数。 |
+| `agent.model_retry_backoff_seconds` | 重试基础等待时间；指数退避和随机抖动最多等待五秒。 |
 | `run.output_dir` | 运行产物输出目录。 |
-| `run.run_id` | 可选，指定运行目录名。不传时默认使用 UTC 时间戳；必须是单个目录名，已存在会报错。 |
+| `run.run_id` | 可选，指定运行目录名。不传时默认使用 UTC 时间戳；使用 `--resume` 时必须填写。 |
 | `run.max_workers` | `run-benchmark` 并行 worker 数。 |
 | `run.task_timeout_seconds` | 单个任务允许的最长墙钟时间。设为 `0` 或负数可关闭任务级超时。 |
 
@@ -126,7 +132,34 @@ uv run dabench <command> --config PATH [options]
 | `run-task` | 对单个任务运行 baseline，并写出结果。 | `uv run dabench run-task task_1 --config configs/react_baseline.local.yaml` |
 | `run-benchmark` | 批量运行整个公开数据集。 | `uv run dabench run-benchmark --config configs/react_baseline.local.yaml` |
 
-`run-benchmark` 还支持 `--limit N`，用于限制任务数量。
+`run-benchmark` 支持：
+
+- `--limit N`：限制任务数量；
+- `--task-file PATH`：按文件中每行一个任务 ID 运行，空行和注释会被忽略；
+- `--resume`：复用 `run.run_id` 指定的运行目录；
+- `--retry-failed`：与 `--resume` 一起使用，归档并重跑已有失败任务。
+
+运行固定的 11 题快速回归集：
+
+```bash
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt
+```
+
+先把 `run.run_id` 设置为已有运行目录名，再恢复中断运行或只重试已经完成的失败任务：
+
+```bash
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt \
+  --resume
+
+uv run dabench run-benchmark \
+  --config configs/react_baseline.local.yaml \
+  --task-file configs/regression_tasks.example.txt \
+  --resume --retry-failed
+```
 
 ## Tools
 
@@ -149,6 +182,7 @@ uv run dabench <command> --config PATH [options]
 
 每个任务运行后可能生成：
 
+- `events.jsonl`
 - `trace.json`
 - `prediction.csv`
 
@@ -156,6 +190,7 @@ uv run dabench <command> --config PATH [options]
 
 ```text
 artifacts/runs/<run_id>/<task_id>/
+├── events.jsonl
 ├── trace.json
 └── prediction.csv
 ```
@@ -163,8 +198,13 @@ artifacts/runs/<run_id>/<task_id>/
 批量运行还会额外生成：
 
 ```text
+artifacts/runs/<run_id>/manifest.json
 artifacts/runs/<run_id>/summary.json
 ```
+
+`events.jsonl` 会在每次模型请求、工具调用和步骤完成后立即刷新，因此任务被硬超时终止后
+仍能保留诊断进度。重跑任务的旧产物会归档到
+`<task_id>/attempts/attempt_NNN/`。
 
 ## 本地评测
 
@@ -179,6 +219,9 @@ uv run dabench score-run artifacts/runs/<run_id> \
 
 命令默认在运行目录中写入 `scores.json`。评分公式、归一化规则和部分任务运行的解释见
 [`docs/evaluation.md`](docs/evaluation.md)。
+
+本次运行可靠性改造的动机、实现变化和脱敏耗时对比记录在
+[`docs/2026-07-24-runner-reliability.md`](docs/2026-07-24-runner-reliability.md)。
 
 ## Contact
 

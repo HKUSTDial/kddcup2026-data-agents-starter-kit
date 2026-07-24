@@ -28,14 +28,17 @@ class AgentConfig:
     api_key: str = ""
     max_steps: int = 16
     temperature: float = 0.0
+    model_request_timeout_seconds: float = 20.0
+    model_max_retries: int = 1
+    model_retry_backoff_seconds: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
 class RunConfig:
     output_dir: Path = field(default_factory=_default_run_output_dir)
     run_id: str | None = None
-    max_workers: int = 4
-    task_timeout_seconds: int = 600
+    max_workers: int = 2
+    task_timeout_seconds: float = 120.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +76,21 @@ def load_app_config(config_path: Path) -> AppConfig:
         api_key=str(agent_payload.get("api_key", agent_defaults.api_key)),
         max_steps=int(agent_payload.get("max_steps", agent_defaults.max_steps)),
         temperature=float(agent_payload.get("temperature", agent_defaults.temperature)),
+        model_request_timeout_seconds=float(
+            agent_payload.get(
+                "model_request_timeout_seconds",
+                agent_defaults.model_request_timeout_seconds,
+            )
+        ),
+        model_max_retries=int(
+            agent_payload.get("model_max_retries", agent_defaults.model_max_retries)
+        ),
+        model_retry_backoff_seconds=float(
+            agent_payload.get(
+                "model_retry_backoff_seconds",
+                agent_defaults.model_retry_backoff_seconds,
+            )
+        ),
     )
     raw_run_id = run_payload.get("run_id")
     run_id = run_defaults.run_id
@@ -84,6 +102,8 @@ def load_app_config(config_path: Path) -> AppConfig:
         output_dir=_path_value(run_payload.get("output_dir"), run_defaults.output_dir),
         run_id=run_id,
         max_workers=int(run_payload.get("max_workers", run_defaults.max_workers)),
-        task_timeout_seconds=int(run_payload.get("task_timeout_seconds", run_defaults.task_timeout_seconds)),
+        task_timeout_seconds=float(
+            run_payload.get("task_timeout_seconds", run_defaults.task_timeout_seconds)
+        ),
     )
     return AppConfig(dataset=dataset_config, agent=agent_config, run=run_config)

@@ -13,6 +13,7 @@ from data_agent_baseline.agents.prompt import (
 )
 from data_agent_baseline.agents.runtime import AgentRunResult, AgentRuntimeState, StepRecord
 from data_agent_baseline.benchmark.schema import PublicTask
+from data_agent_baseline.events import EventSink, emit_event
 from data_agent_baseline.tools.registry import ToolRegistry
 
 
@@ -74,11 +75,13 @@ class ReActAgent:
         tools: ToolRegistry,
         config: ReActAgentConfig | None = None,
         system_prompt: str | None = None,
+        event_sink: EventSink | None = None,
     ) -> None:
         self.model = model
         self.tools = tools
         self.config = config or ReActAgentConfig()
         self.system_prompt = system_prompt or REACT_SYSTEM_PROMPT
+        self.event_sink = event_sink
 
     def _build_messages(self, task: PublicTask, state: AgentRuntimeState) -> list[ModelMessage]:
         system_content = build_system_prompt(
@@ -97,10 +100,42 @@ class ReActAgent:
     def run(self, task: PublicTask) -> AgentRunResult:
         state = AgentRuntimeState()
         for step_index in range(1, self.config.max_steps + 1):
-            raw_response = self.model.complete(self._build_messages(task, state))
+            emit_event(
+                self.event_sink,
+                "step_started",
+                {"step_index": step_index},
+            )
+            raw_response = self.model.complete(
+                self._build_messages(task, state),
+                request_context={
+                    "task_id": task.task_id,
+                    "step_index": step_index,
+                },
+            )
+            active_tool: str | None = None
             try:
                 model_step = parse_model_step(raw_response)
+                active_tool = model_step.action
+                emit_event(
+                    self.event_sink,
+                    "tool_started",
+                    {
+                        "step_index": step_index,
+                        "tool": model_step.action,
+                        "action_input": model_step.action_input,
+                    },
+                )
                 tool_result = self.tools.execute(task, model_step.action, model_step.action_input)
+                emit_event(
+                    self.event_sink,
+                    "tool_completed",
+                    {
+                        "step_index": step_index,
+                        "tool": model_step.action,
+                        "ok": tool_result.ok,
+                        "is_terminal": tool_result.is_terminal,
+                    },
+                )
                 observation = {
                     "ok": tool_result.ok,
                     "tool": model_step.action,
@@ -116,24 +151,50 @@ class ReActAgent:
                     ok=tool_result.ok,
                 )
                 state.steps.append(step_record)
+                emit_event(
+                    self.event_sink,
+                    "step_completed",
+                    {
+                        "step_index": step_index,
+                        "step": step_record.to_dict(),
+                    },
+                )
                 if tool_result.is_terminal:
                     state.answer = tool_result.answer
                     break
             except Exception as exc:
+                if active_tool is not None:
+                    emit_event(
+                        self.event_sink,
+                        "tool_failed",
+                        {
+                            "step_index": step_index,
+                            "tool": active_tool,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        },
+                    )
                 observation = {
                     "ok": False,
                     "error": str(exc),
                 }
-                state.steps.append(
-                    StepRecord(
-                        step_index=step_index,
-                        thought="",
-                        action="__error__",
-                        action_input={},
-                        raw_response=raw_response,
-                        observation=observation,
-                        ok=False,
-                    )
+                step_record = StepRecord(
+                    step_index=step_index,
+                    thought="",
+                    action="__error__",
+                    action_input={},
+                    raw_response=raw_response,
+                    observation=observation,
+                    ok=False,
+                )
+                state.steps.append(step_record)
+                emit_event(
+                    self.event_sink,
+                    "step_completed",
+                    {
+                        "step_index": step_index,
+                        "step": step_record.to_dict(),
+                    },
                 )
 
         if state.answer is None and state.failure_reason is None:
