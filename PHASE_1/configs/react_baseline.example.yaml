@@ -7,9 +7,12 @@ agent:
   api_key: YOUR_API_KEY
   max_steps: 16
   temperature: 0.0
+  model_request_timeout_seconds: 20
+  model_max_retries: 1
+  model_retry_backoff_seconds: 1
 
 run:
   output_dir: artifacts/runs
   run_id: example_run_id
-  max_workers: 8
-  task_timeout_seconds: 600
+  max_workers: 2
+  task_timeout_seconds: 120
