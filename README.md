@@ -76,6 +76,7 @@ uv.lock                           # Locked dependency versions
 
 - [2026-07-23: Phase 1 Local Evaluation Pipeline](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
 - [2026-07-24: Phase 1 Runner Reliability](PHASE_1/docs/2026-07-24-runner-reliability.md)
+- [2026-07-24: Phase 1 Native Tool Calling](PHASE_1/docs/2026-07-24-native-tool-calling.md)
 
 ## Contact
 
@@ -133,6 +134,6 @@ The same baseline layout is used inside each phase directory. For example, after
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
 | `src/data_agent_baseline/tools/sqlite.py` | `inspect_sqlite_schema`, `execute_context_sql` |
 | `src/data_agent_baseline/tools/registry.py` | Tool registration and terminal `answer` |
-| `src/data_agent_baseline/agents/prompt.py` | System prompt, task prompt, observation prompt |
-| `src/data_agent_baseline/agents/react.py` | ReAct runtime with JSON action protocol |
+| `src/data_agent_baseline/agents/prompt.py` | System and task prompts |
+| `src/data_agent_baseline/agents/react.py` | ReAct runtime and model/tool protocol |
 | `src/data_agent_baseline/run/runner.py` | Single-task and benchmark execution |

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Any, Protocol
@@ -13,17 +14,52 @@ from data_agent_baseline.events import EventSink, emit_event
 
 
 @dataclass(frozen=True, slots=True)
-class ModelMessage:
-    role: str
-    content: str
+class ModelToolCall:
+    id: str
+    name: str
+    arguments: str
+
+    def to_openai_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "arguments": self.arguments,
+            },
+        }
 
 
 @dataclass(frozen=True, slots=True)
-class ModelStep:
-    thought: str
-    action: str
-    action_input: dict[str, Any]
+class ModelMessage:
+    role: str
+    content: str | None
+    tool_calls: tuple[ModelToolCall, ...] = field(default_factory=tuple)
+    tool_call_id: str | None = None
+
+    def to_openai_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "role": self.role,
+            "content": self.content,
+        }
+        if self.tool_calls:
+            payload["tool_calls"] = [call.to_openai_dict() for call in self.tool_calls]
+        if self.tool_call_id is not None:
+            payload["tool_call_id"] = self.tool_call_id
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class ModelResponse:
+    content: str
+    tool_calls: tuple[ModelToolCall, ...]
     raw_response: str
+    finish_reason: str | None = None
+
+
+class ToolSchemaSource(Protocol):
+    def to_openai_tools(self) -> list[dict[str, Any]]:
+        raise NotImplementedError
 
 
 class ModelAdapter(Protocol):
@@ -31,9 +67,28 @@ class ModelAdapter(Protocol):
         self,
         messages: list[ModelMessage],
         *,
+        tools: ToolSchemaSource | None = None,
         request_context: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> ModelResponse:
         raise NotImplementedError
+
+
+def _serialize_response(
+    *,
+    content: str,
+    tool_calls: tuple[ModelToolCall, ...],
+    finish_reason: str | None,
+) -> str:
+    return json.dumps(
+        {
+            "role": "assistant",
+            "content": content,
+            "tool_calls": [call.to_openai_dict() for call in tool_calls],
+            "finish_reason": finish_reason,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
 
 
 class OpenAIModelAdapter:
@@ -112,21 +167,71 @@ class OpenAIModelAdapter:
         jitter = self._random() * min(self.retry_backoff_seconds, 0.5)
         return min(exponential_delay + jitter, 5.0)
 
+    @staticmethod
+    def _parse_response(response: Any) -> ModelResponse:
+        choices = response.choices or []
+        if not choices:
+            raise RuntimeError("Model response missing choices.")
+
+        choice = choices[0]
+        message = choice.message
+        content_value = getattr(message, "content", None)
+        content = content_value if isinstance(content_value, str) else ""
+        parsed_calls: list[ModelToolCall] = []
+        for raw_call in getattr(message, "tool_calls", None) or []:
+            function = getattr(raw_call, "function", None)
+            arguments = getattr(function, "arguments", "") if function is not None else ""
+            if isinstance(arguments, dict):
+                arguments = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+            parsed_calls.append(
+                ModelToolCall(
+                    id=str(getattr(raw_call, "id", "") or ""),
+                    name=str(getattr(function, "name", "") or "") if function is not None else "",
+                    arguments=str(arguments or ""),
+                )
+            )
+
+        tool_calls = tuple(parsed_calls)
+        finish_reason_value = getattr(choice, "finish_reason", None)
+        finish_reason = str(finish_reason_value) if finish_reason_value is not None else None
+        return ModelResponse(
+            content=content,
+            tool_calls=tool_calls,
+            raw_response=_serialize_response(
+                content=content,
+                tool_calls=tool_calls,
+                finish_reason=finish_reason,
+            ),
+            finish_reason=finish_reason,
+        )
+
     def complete(
         self,
         messages: list[ModelMessage],
         *,
+        tools: ToolSchemaSource | None = None,
         request_context: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> ModelResponse:
         if not self.api_key:
             raise RuntimeError("Missing model API key in config.agent.api_key.")
         if self._client is None:
             raise RuntimeError("Model client is not initialized.")
 
         context = dict(request_context or {})
-        rendered_messages = [
-            {"role": message.role, "content": message.content} for message in messages
-        ]
+        request_payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [message.to_openai_dict() for message in messages],
+            "temperature": self.temperature,
+        }
+        if tools is not None:
+            request_payload.update(
+                {
+                    "tools": tools.to_openai_tools(),
+                    "tool_choice": "auto",
+                    "parallel_tool_calls": False,
+                }
+            )
+
         max_attempts = self.max_retries + 1
         for attempt in range(1, max_attempts + 1):
             started_at = time.perf_counter()
@@ -141,11 +246,7 @@ class OpenAIModelAdapter:
                 },
             )
             try:
-                response = self._client.chat.completions.create(
-                    model=self.model,
-                    messages=rendered_messages,
-                    temperature=self.temperature,
-                )
+                raw_response = self._client.chat.completions.create(**request_payload)
             except APIError as exc:
                 elapsed_seconds = round(time.perf_counter() - started_at, 3)
                 retryable = self._is_retryable(exc)
@@ -181,12 +282,7 @@ class OpenAIModelAdapter:
                 self._sleep(delay_seconds)
                 continue
 
-            choices = response.choices or []
-            if not choices:
-                raise RuntimeError("Model response missing choices.")
-            content = choices[0].message.content
-            if not isinstance(content, str):
-                raise RuntimeError("Model response missing text content.")
+            response = self._parse_response(raw_response)
             emit_event(
                 self.event_sink,
                 "model_request_succeeded",
@@ -194,25 +290,30 @@ class OpenAIModelAdapter:
                     **context,
                     "attempt": attempt,
                     "elapsed_seconds": round(time.perf_counter() - started_at, 3),
+                    "finish_reason": response.finish_reason,
+                    "tool_call_count": len(response.tool_calls),
                 },
             )
-            return content
+            return response
 
         raise AssertionError("Model retry loop exited unexpectedly.")
 
 
 class ScriptedModelAdapter:
-    def __init__(self, responses: list[str]) -> None:
+    def __init__(self, responses: list[ModelResponse]) -> None:
         self._responses = list(responses)
+        self.requests: list[list[ModelMessage]] = []
 
     def complete(
         self,
         messages: list[ModelMessage],
         *,
+        tools: ToolSchemaSource | None = None,
         request_context: dict[str, Any] | None = None,
-    ) -> str:
-        del messages
+    ) -> ModelResponse:
+        del tools
         del request_context
+        self.requests.append(list(messages))
         if not self._responses:
             raise RuntimeError("No scripted model responses remaining.")
         return self._responses.pop(0)

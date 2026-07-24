@@ -164,6 +164,12 @@ uv run dabench run-benchmark \
 
 ## Tools
 
+Tools are advertised through the OpenAI-compatible native `tools` field. The model returns
+one `tool_call` per turn, the registry validates its JSON arguments with Pydantic before
+execution, and the result is returned as a `tool` message with the matching `tool_call_id`.
+The same Chat Completions flow works with Alibaba Cloud Model Studio's OpenAI-compatible
+endpoint through the existing `agent.api_base` setting.
+
 The baseline exposes these tools to the model:
 
 | Tool | Purpose | Inputs |
@@ -225,6 +231,9 @@ normalization rules, and interpretation of partial runs.
 The motivation, implementation changes, and sanitized runtime comparison for the
 reliability work are recorded in
 [`docs/2026-07-24-runner-reliability.md`](docs/2026-07-24-runner-reliability.md).
+The native tool protocol, validation behavior, trace compatibility, and verification
+results are recorded in
+[`docs/2026-07-24-native-tool-calling.md`](docs/2026-07-24-native-tool-calling.md).
 
 ## Contact
 
@@ -279,7 +288,9 @@ reliability work are recorded in
 | `src/data_agent_baseline/tools/filesystem.py` | `list_context`, `read_csv`, `read_json`, `read_doc` |
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
 | `src/data_agent_baseline/tools/sqlite.py` | `inspect_sqlite_schema`, `execute_context_sql` |
-| `src/data_agent_baseline/tools/registry.py` | Tool registration and terminal `answer` |
-| `src/data_agent_baseline/agents/prompt.py` | System prompt, task prompt, observation prompt |
-| `src/data_agent_baseline/agents/react.py` | ReAct runtime with JSON action protocol |
+| `src/data_agent_baseline/tools/contracts.py` | Pydantic input contracts for native tools |
+| `src/data_agent_baseline/tools/registry.py` | JSON Schema generation, validation, dispatch, and terminal `answer` |
+| `src/data_agent_baseline/agents/model.py` | OpenAI-compatible messages and native `tool_calls` adapter |
+| `src/data_agent_baseline/agents/prompt.py` | System and task prompts |
+| `src/data_agent_baseline/agents/react.py` | Native tool-calling ReAct runtime |
 | `src/data_agent_baseline/run/runner.py` | Single-task and benchmark execution |

@@ -163,6 +163,11 @@ uv run dabench run-benchmark \
 
 ## Tools
 
+工具通过 OpenAI-compatible 原生 `tools` 字段提供给模型。模型每轮返回一个
+`tool_call`，注册表在执行前使用 Pydantic 校验 JSON 参数，结果再通过带有匹配
+`tool_call_id` 的 `tool` 消息返回。现有 `agent.api_base` 配置也可直接连接阿里云百炼
+OpenAI-compatible Chat Completions 接口。
+
 当前暴露给模型的工具有：
 
 | 工具 | 作用 | 输入 |
@@ -222,6 +227,8 @@ uv run dabench score-run artifacts/runs/<run_id> \
 
 本次运行可靠性改造的动机、实现变化和脱敏耗时对比记录在
 [`docs/2026-07-24-runner-reliability.md`](docs/2026-07-24-runner-reliability.md)。
+原生工具协议、参数校验、Trace 兼容策略和验证结果记录在
+[`docs/2026-07-24-native-tool-calling.md`](docs/2026-07-24-native-tool-calling.md)。
 
 ## Contact
 
@@ -276,7 +283,9 @@ uv run dabench score-run artifacts/runs/<run_id> \
 | `src/data_agent_baseline/tools/filesystem.py` | `list_context`、`read_csv`、`read_json`、`read_doc` |
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
 | `src/data_agent_baseline/tools/sqlite.py` | `inspect_sqlite_schema`、`execute_context_sql` |
-| `src/data_agent_baseline/tools/registry.py` | 工具注册与终止型 `answer` |
-| `src/data_agent_baseline/agents/prompt.py` | system prompt、task prompt、observation prompt |
-| `src/data_agent_baseline/agents/react.py` | 基于 JSON action 协议的 ReAct runtime |
+| `src/data_agent_baseline/tools/contracts.py` | 原生工具的 Pydantic 输入契约 |
+| `src/data_agent_baseline/tools/registry.py` | JSON Schema 生成、校验、分发与终止型 `answer` |
+| `src/data_agent_baseline/agents/model.py` | OpenAI-compatible 消息与原生 `tool_calls` Adapter |
+| `src/data_agent_baseline/agents/prompt.py` | system prompt 与 task prompt |
+| `src/data_agent_baseline/agents/react.py` | 原生工具调用 ReAct runtime |
 | `src/data_agent_baseline/run/runner.py` | 单任务和批量运行逻辑 |

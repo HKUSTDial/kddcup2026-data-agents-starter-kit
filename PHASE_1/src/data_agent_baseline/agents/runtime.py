@@ -15,6 +15,8 @@ class StepRecord:
     raw_response: str
     observation: dict[str, Any]
     ok: bool
+    tool_call_id: str | None = None
+    finish_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -76,6 +76,7 @@ uv.lock                           # 锁定的依赖版本
 
 - [2026-07-23：Phase 1 本地评测链路改造](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
 - [2026-07-24：Phase 1 运行可靠性与实验反馈周期改造](PHASE_1/docs/2026-07-24-runner-reliability.md)
+- [2026-07-24：Phase 1 原生工具调用改造](PHASE_1/docs/2026-07-24-native-tool-calling.md)
 
 ## 联系方式
 
@@ -133,6 +134,6 @@ uv.lock                           # 锁定的依赖版本
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
 | `src/data_agent_baseline/tools/sqlite.py` | `inspect_sqlite_schema`、`execute_context_sql` |
 | `src/data_agent_baseline/tools/registry.py` | 工具注册与终止型 `answer` |
-| `src/data_agent_baseline/agents/prompt.py` | system prompt、task prompt、observation prompt |
-| `src/data_agent_baseline/agents/react.py` | 基于 JSON action 协议的 ReAct runtime |
+| `src/data_agent_baseline/agents/prompt.py` | system prompt 与 task prompt |
+| `src/data_agent_baseline/agents/react.py` | ReAct runtime 与模型/工具协议 |
 | `src/data_agent_baseline/run/runner.py` | 单任务和批量运行逻辑 |

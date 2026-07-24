@@ -1,7 +1,11 @@
 import json
 from pathlib import Path
 
-from data_agent_baseline.agents.model import ScriptedModelAdapter
+from data_agent_baseline.agents.model import (
+    ModelResponse,
+    ModelToolCall,
+    ScriptedModelAdapter,
+)
 from data_agent_baseline.config import AgentConfig, AppConfig, DatasetConfig, RunConfig
 from data_agent_baseline.run.runner import run_benchmark
 from data_agent_baseline.tools.registry import create_default_tool_registry
@@ -37,16 +41,33 @@ def _config(tmp_path: Path, *, run_id: str, max_steps: int = 1) -> AppConfig:
     )
 
 
-def _answer_response(value: str) -> str:
-    return json.dumps(
+def _answer_response(value: str) -> ModelResponse:
+    arguments = json.dumps(
         {
-            "thought": "done",
-            "action": "answer",
-            "action_input": {
-                "columns": ["value"],
-                "rows": [[value]],
-            },
-        }
+            "columns": ["value"],
+            "rows": [[value]],
+        },
+        separators=(",", ":"),
+    )
+    call = ModelToolCall(
+        id=f"call_answer_{value}",
+        name="answer",
+        arguments=arguments,
+    )
+    return ModelResponse(
+        content="",
+        tool_calls=(call,),
+        raw_response=json.dumps({"tool_calls": [call.to_openai_dict()]}),
+        finish_reason="tool_calls",
+    )
+
+
+def _no_tool_response() -> ModelResponse:
+    return ModelResponse(
+        content="I cannot call a tool.",
+        tool_calls=(),
+        raw_response='{"content":"I cannot call a tool.","tool_calls":[]}',
+        finish_reason="stop",
     )
 
 
@@ -83,7 +104,7 @@ def test_retry_failed_archives_previous_attempt(tmp_path):
 
     run_output_dir, first_artifacts = run_benchmark(
         config=config,
-        model=ScriptedModelAdapter(["not-json"]),
+        model=ScriptedModelAdapter([_no_tool_response()]),
         tools=create_default_tool_registry(),
         task_ids=["task_1"],
     )
