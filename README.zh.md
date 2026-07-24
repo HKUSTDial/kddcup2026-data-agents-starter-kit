@@ -72,6 +72,10 @@ uv.lock                           # 锁定的依赖版本
 - 本地运行产物请放在 `artifacts/` 下；这些文件不应提交到仓库。
 - 在打包或提交方案前，请先阅读对应阶段目录下的 README。
 
+## 工程记录
+
+- [2026-07-23：Phase 1 本地评测链路改造](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
+
 ## 联系方式
 
 - 问题反馈： https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues

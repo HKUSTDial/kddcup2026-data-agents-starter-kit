@@ -72,6 +72,10 @@ uv.lock                           # Locked dependency versions
 - Keep local run outputs under `artifacts/`; they are not intended to be committed.
 - Review the phase-specific README before packaging or submitting a solution.
 
+## Engineering Notes
+
+- [2026-07-23: Phase 1 Local Evaluation Pipeline](PHASE_1/docs/2026-07-23-phase1-evaluation-pipeline.md)
+
 ## Contact
 
 - Open issues: https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues
